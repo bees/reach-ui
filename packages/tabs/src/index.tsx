@@ -34,6 +34,7 @@ import {
   useDescendants,
 } from "@reach/descendants";
 import {
+  As,
   boolOrBoolString,
   checkStyles,
   cloneValidElement,
@@ -319,94 +320,96 @@ if (__DEV__) {
  *
  * @see Docs https://reacttraining.com/reach-ui/tabs#tablist
  */
-const TabListImpl = forwardRefWithAs<TabListProps, "div">(function TabList(
-  { children, as: Comp = "div", onKeyDown, ...props },
-  forwardedRef
-) {
-  const {
-    focusedIndex,
-    isControlled,
-    isRTL,
-    keyboardActivation,
-    onSelectTabWithKeyboard,
-    orientation,
-    selectedIndex,
-    setSelectedIndex,
-  } = useContext(TabsContext);
+const TabListImpl = <ComponentType extends As = "div">() =>
+  forwardRefWithAs<TabListProps, ComponentType>(function TabList(
+    { children, as: Comp = "div", onKeyDown, ...props },
+    forwardedRef
+  ) {
+    const {
+      focusedIndex,
+      isControlled,
+      isRTL,
+      keyboardActivation,
+      onSelectTabWithKeyboard,
+      orientation,
+      selectedIndex,
+      setSelectedIndex,
+    } = useContext(TabsContext);
 
-  let { descendants: tabs } = useContext(TabsDescendantsContext);
+    let { descendants: tabs } = useContext(TabsDescendantsContext);
 
-  let ownRef = useRef<HTMLElement | null>(null);
-  let ref = useForkedRef(forwardedRef, ownRef);
+    let ownRef = useRef<HTMLElement | null>(null);
+    let ref = useForkedRef(forwardedRef, ownRef);
 
-  useEffect(() => {
-    if (
-      ownRef.current &&
-      ((ownRef.current.ownerDocument &&
-        ownRef.current.ownerDocument.dir === "rtl") ||
-        getElementComputedStyle(ownRef.current, "direction") === "rtl")
-    ) {
-      isRTL.current = true;
-    }
-  }, [isRTL]);
-
-  let handleKeyDown = useEventCallback(
-    wrapEvent(
-      onKeyDown,
-      useDescendantKeyDown(TabsDescendantsContext, {
-        currentIndex:
-          keyboardActivation === TabsKeyboardActivation.Manual
-            ? focusedIndex
-            : selectedIndex,
-        orientation,
-        rotate: true,
-        callback: onSelectTabWithKeyboard,
-        filter: tab => !tab.disabled,
-        rtl: isRTL.current,
-      })
-    )
-  );
-
-  useIsomorphicLayoutEffect(() => {
-    // In the event an uncontrolled component's selected index is disabled,
-    // (this should only happen if the first tab is disabled and no default
-    // index is set), we need to override the selection to the next selectable
-    // index value.
-    if (!isControlled && boolOrBoolString(tabs[selectedIndex]?.disabled)) {
-      let next = tabs.find(tab => !tab.disabled);
-      if (next) {
-        setSelectedIndex(next.index);
+    useEffect(() => {
+      if (
+        ownRef.current &&
+        ((ownRef.current.ownerDocument &&
+          ownRef.current.ownerDocument.dir === "rtl") ||
+          getElementComputedStyle(ownRef.current, "direction") === "rtl")
+      ) {
+        isRTL.current = true;
       }
-    }
-  }, [tabs, isControlled, selectedIndex, setSelectedIndex]);
+    }, [isRTL]);
 
-  return (
-    <Comp
-      // The element that serves as the container for the set of tabs has role
-      // `tablist`
-      // https://www.w3.org/TR/wai-aria-practices-1.2/#tabpanel
-      role="tablist"
-      // If the `tablist` element is vertically oriented, it has the property
-      // `aria-orientation` set to `"vertical"`. The default value of
-      // `aria-orientation` for a tablist element is `"horizontal"`.
-      // https://www.w3.org/TR/wai-aria-practices-1.2/#tabpanel
-      aria-orientation={orientation}
-      {...props}
-      data-reach-tab-list=""
-      ref={ref}
-      onKeyDown={handleKeyDown}
-    >
-      {Children.map(children, (child, index) => {
-        // TODO: Remove in 1.0
-        return cloneValidElement(child, {
-          isSelected: index === selectedIndex,
-        });
-      })}
-    </Comp>
-  );
-});
+    let handleKeyDown = useEventCallback(
+      wrapEvent(
+        onKeyDown,
+        useDescendantKeyDown(TabsDescendantsContext, {
+          currentIndex:
+            keyboardActivation === TabsKeyboardActivation.Manual
+              ? focusedIndex
+              : selectedIndex,
+          orientation,
+          rotate: true,
+          callback: onSelectTabWithKeyboard,
+          filter: (tab) => !tab.disabled,
+          rtl: isRTL.current,
+        })
+      )
+    );
 
-const TabList = memo(TabListImpl);
+    useIsomorphicLayoutEffect(() => {
+      // In the event an uncontrolled component's selected index is disabled,
+      // (this should only happen if the first tab is disabled and no default
+      // index is set), we need to override the selection to the next selectable
+      // index value.
+      if (!isControlled && boolOrBoolString(tabs[selectedIndex]?.disabled)) {
+        let next = tabs.find((tab) => !tab.disabled);
+        if (next) {
+          setSelectedIndex(next.index);
+        }
+      }
+    }, [tabs, isControlled, selectedIndex, setSelectedIndex]);
+
+    return (
+      <Comp
+        // The element that serves as the container for the set of tabs has role
+        // `tablist`
+        // https://www.w3.org/TR/wai-aria-practices-1.2/#tabpanel
+        role="tablist"
+        // If the `tablist` element is vertically oriented, it has the property
+        // `aria-orientation` set to `"vertical"`. The default value of
+        // `aria-orientation` for a tablist element is `"horizontal"`.
+        // https://www.w3.org/TR/wai-aria-practices-1.2/#tabpanel
+        aria-orientation={orientation}
+        {...props}
+        data-reach-tab-list=""
+        ref={ref}
+        onKeyDown={handleKeyDown}
+      >
+        {Children.map(children, (child, index) => {
+          // TODO: Remove in 1.0
+          return cloneValidElement(child, {
+            isSelected: index === selectedIndex,
+          });
+        })}
+      </Comp>
+    );
+  });
+
+const TabList = <T extends As = "div">(props: TabListProps) =>
+  memo(() => TabListImpl<T>()(props));
 
 /**
  * @see Docs https://reacttraining.com/reach-ui/tabs#tablist-props
